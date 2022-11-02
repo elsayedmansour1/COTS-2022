@@ -1,116 +1,143 @@
-/*
- * TWI_Program.c
- *
- *  Created on: Oct 16, 2022
- *      Author: Elsayed.Mansour
- */
-#include"STD_TYPES.h"
-#include"BIT_MATH.h"
-#include"TWI_Register.h"
-#include"TWI_Interface.h"
+#include "STD_TYPES.h"
+#include "BIT_MATH.h"
+#include "TWI_Interface.h"
+#include "TWI_Register.h"
 
 
 void TWI_voidMasterInit(void)
 {
+	//Frequency 400KHZ
+	TWBR=2;
+	TWSR=0X00;
+	//Enable TWI
+	SET_BIT(TWCR,2);
+	//Address of master With disable General call
+	TWAR=0B00000100;
+	
+}
+void TWI_voidSlaveInit(void)
+{
 
-    TWBR = 0x02;
-	TWSR = 0x00;
-	TWAR = 0b00000010; // my address = 0x01 :)
-
+	/* Enable ACKnowledgemnet */
+	SET_BIT(TWCR,6);
+	//Address of master With disable General call
+	TWAR=0B00000010;
+	//Enable TWI
 	SET_BIT(TWCR,2);
 }
 void TWI_voidStartCondition(void)
 {
-	//set start condition
-	SET_BIT(TWCR,5);
-	//make sure flag clear
-	SET_BIT(TWCR,7);
-	//enable TWI
-	SET_BIT(TWCR,2);
-	//wait until flag be set
-	while(GET_BIT(TWCR,7)==0);
-	//make sure return state for start condition
-	if((TWSR & 0xf8) !=0x08)
-	{
-		//TWDR=0x50;
-	}
-}
-void TWI_voidSendSlaveAddressWrite(u8 copy_u8SlaveAddress)
-{
-	//write slave address
-	TWDR=copy_u8SlaveAddress<<1;
-	//set write operation
-	CLR_BIT(TWDR,0);
-	//make sure flag be clear
-	SET_BIT(TWCR,7);
-	//enable TWI
-	SET_BIT(TWCR,2);
-	//wait until flag be set
-	while(!GET_BIT(TWCR,7));
-	//make sure return state for slave with write
-	if((TWSR &0xf8)!=0x18)
-	{
-			//for error state when you need it
-	}
-
-}
-void TWI_voidSendSlaveAddressRead(u8 copy_u8SlaveAddress)
-{
-	//CLR bit of start condition
-	CLR_BIT(TWCR,5);
-	//write slave address
-	TWDR=copy_u8SlaveAddress<<1;
-	//set Read operation
-	SET_BIT(TWDR,0);
 	//make sure flag is clear
 	SET_BIT(TWCR,7);
-	//wait until flag be set
-	while(!GET_BIT(TWCR,7));
-	//make sure return state for slave with write
-	if((TWSR &0xf8)!=0x40)
+	//send Start Condition
+	SET_BIT(TWCR,5);
+	//Enable TWI
+	SET_BIT(TWCR,2);
+	//wait until flag of start condition to be set_new_handler
+	while(GET_BIT(TWCR,7)==0);
+	//check the start condition done correctly
+	if((TWSR &  0xf8)!=0x08)
 	{
-			//for error state when you need it
+		//return error
+	}
+}
+void TWI_voidMasterSendSlaveAddWithWrite(u8 copy_u8Address)
+{	
+	//send Slave address
+	TWDR=copy_u8Address<<1;
+	//set Write operation
+	CLR_BIT(TWDR,0);
+	//Disable Start Condition
+	CLR_BIT(TWCR,5);
+	//make sure flag is clear
+	SET_BIT(TWCR,7);
+	//Enable TWI
+	SET_BIT(TWCR,2);
+	//wait until flag of Slave address to be set_new_handler
+	while(GET_BIT(TWCR,7)==0);
+	//check the Slave address done correctly
+	if((TWSR & 0xf8)!=0x18)
+	{
+		//return error
+	}
+}
+void TWI_voidMasterSendSlaveAddWithRead(u8 copy_u8Address)
+{
+	//send Slave address
+	TWDR=copy_u8Address<<1;
+	//set Read operation
+	SET_BIT(TWDR,0);
+	//Disable Start Condition
+	CLR_BIT(TWCR,5);
+	//make sure flag is clear
+	SET_BIT(TWCR,7);
+	//Enable TWI
+	SET_BIT(TWCR,2);
+	//wait until flag of Slave address to be set_new_handler
+	while(GET_BIT(TWCR,7)==0);
+	//check the Slave address done correctly
+	if((TWSR & 0xf8)!=0x40)
+	{
+		//return error
 	}
 }
 void TWI_voidMasterSendData(u8 copy_u8Data)
 {
-	//Write your data
+	//master send Data
 	TWDR=copy_u8Data;
 	//make sure flag is clear
 	SET_BIT(TWCR,7);
-	//enable TWI
+	//Enable TWI
 	SET_BIT(TWCR,2);
-	//wait until flag be clear
-	while(!GET_BIT(TWCR,7));
-	//make sure return state for master send data
-	if((TWSR &0xf8)!=0x40)
+	//wait until flag of Slave address to be set_new_handler
+	while(GET_BIT(TWCR,7)==0);
+	//check the send data done correctly
+	if((TWSR & 0xf8)!=0x28)
 	{
-			//for error state when you need it
+		//return error
 	}
 }
-void TWI_voidMasterReceiveData(u8 *copy_u8Data)
+u8 	 TWI_u8MasterReceiveData(void)
 {
-
 	//make sure flag is clear
 	SET_BIT(TWCR,7);
-	//wait until flag be clear
-	while(!GET_BIT(TWCR,7));
-	//make sure return state for master send data
-	if((TWSR &0xf8)!=0x50)
+	//Enable TWI
+	SET_BIT(TWCR,2);
+	//wait until flag of master receive data to be set
+	while(GET_BIT(TWCR,7)==0);
+	//check the send data done correctly
+	if((TWSR &0xf8 )!=0x50)
 	{
-			//for error state when you need it
+		//return error
 	}
-	else
-	{
-		*copy_u8Data=TWDR;
-	}
+
+		return TWDR;
 }
 void TWI_voidStopCondition(void)
 {
 	//make sure flag is clear
 	SET_BIT(TWCR,7);
-	//set Stop condition
-	SET_BIT(TWCR,4);
-	//enable TWI
+	//Enable TWI
 	SET_BIT(TWCR,2);
+	//send Stop Condition
+	SET_BIT(TWCR,4);
+}
+u8 TWI_u8SlaveReceiveData(void)
+{
+	while((TWSR &0xf8 )!=0x60);
+	/* Enable ACKnowledgemnet */
+	SET_BIT(TWCR,6);
+	//make sure flag is clear
+	SET_BIT(TWCR,7);
+	//wait until flag of master receive data to be set
+	while(GET_BIT(TWCR,7)==0);
+	//check the send data done correctly
+	if((TWSR &0xf8 )!=0x60)
+	{
+		//return error
+	}
+
+	return TWDR;
+
+
 }
