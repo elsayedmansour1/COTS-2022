@@ -9,11 +9,13 @@ void TWI_voidMasterInit(void)
 	//Frequency 400KHZ
 	TWBR=2;
 	TWSR=0X00;
+	/* Enable ACKnowledgemnet */
+	SET_BIT(TWCR,6);
 	//Enable TWI
 	SET_BIT(TWCR,2);
 	//Address of master With disable General call
 	TWAR=0B00000100;
-	
+
 }
 void TWI_voidSlaveInit(void)
 {
@@ -39,6 +41,22 @@ void TWI_voidStartCondition(void)
 	if((TWSR &  0xf8)!=0x08)
 	{
 		//return error
+	}
+}
+void TWI_voidSendRepeatedStart(void)
+{
+	/* Send Start Condition */
+	SET_BIT(TWCR,5);
+	/* Clear Flag */
+	SET_BIT(TWCR,7);
+	//Enable TWI
+	SET_BIT(TWCR,2);
+	/* Wait for the Flag */
+	while(GET_BIT(TWCR,7)==0);
+	/* Check ACKnowledgemnt => START CONDITION */
+	if((TWSR & 0xF8) != 0x10 )
+	{
+		//error
 	}
 }
 void TWI_voidMasterSendSlaveAddWithWrite(u8 copy_u8Address)
@@ -72,7 +90,7 @@ void TWI_voidMasterSendSlaveAddWithRead(u8 copy_u8Address)
 	//make sure flag is clear
 	SET_BIT(TWCR,7);
 	//Enable TWI
-	SET_BIT(TWCR,2);
+	//SET_BIT(TWCR,2);
 	//wait until flag of Slave address to be set_new_handler
 	while(GET_BIT(TWCR,7)==0);
 	//check the Slave address done correctly
@@ -97,7 +115,7 @@ void TWI_voidMasterSendData(u8 copy_u8Data)
 		//return error
 	}
 }
-u8 	 TWI_u8MasterReceiveData(void)
+void TWI_u8MasterReceiveData(u8 *copy_u8data)
 {
 	//make sure flag is clear
 	SET_BIT(TWCR,7);
@@ -110,15 +128,18 @@ u8 	 TWI_u8MasterReceiveData(void)
 	{
 		//return error
 	}
+	else
+	{
+		*copy_u8data=TWDR;
+	}
 
-		return TWDR;
 }
 void TWI_voidStopCondition(void)
 {
 	//make sure flag is clear
 	SET_BIT(TWCR,7);
 	//Enable TWI
-	SET_BIT(TWCR,2);
+	//SET_BIT(TWCR,2);
 	//send Stop Condition
 	SET_BIT(TWCR,4);
 }
